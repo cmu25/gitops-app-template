@@ -39,5 +39,5 @@ jobs:
 
           git add .github/workflows/bootstrap.yaml
           git add README.md
-          git commit -m "Remove bootstrap workflow"
+          git commit -m "Remove bootstrap workflow [skip ci]"
           git push
