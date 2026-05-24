@@ -1,4 +1,4 @@
 # {{APP_NAME}}
 
 This is the application repository for {{APP_NAME}}.
-Config repository: https://github.com/{{OWNER}}/{{APP_NAME}}-config
+Config repository: https://github.com/{{REPOSITORY}}-config
