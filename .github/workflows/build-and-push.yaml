@@ -17,6 +17,13 @@ jobs:
       entrypoint: [ "" ]
 
     steps:
+      - name: Get GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.GITHUB_APP_ID }}
+          private-key: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
+
       - uses: actions/checkout@v4
         with:
           token: ${{ steps.app-token.outputs.token }}
@@ -36,17 +43,15 @@ jobs:
             --destination ghcr.io/${{ github.repository }}:${{ github.sha }} \
             --destination ghcr.io/${{ github.repository }}:latest
 
-      - name: Get GitHub App token
-        id: app-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.GITHUB_APP_ID }}
-          private-key: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
-
       - name: Trigger Config Repository
         run: |
           curl -X POST \
             -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
             -H "Accept: application/vnd.github+json" \
             https://api.github.com/repos/${{ github.repository_owner }}/${{ github.event.repository.name }}-config/dispatches \
-            -d '{"event_type":"image-update"}'
+            -d '{
+              "event_type":"image-update",
+              "client_payload":{
+                "source_sha":"${{ github.sha }}"
+              }
+            }'
