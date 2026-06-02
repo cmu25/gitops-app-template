@@ -14,33 +14,74 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Replace Placeholders
+        shell: bash
         run: |
           REPO_NAME="${GITHUB_REPOSITORY#*/}"
-          sed -i "s#{{APP_NAME}}#${REPO_NAME}#g" README.md
-          sed -i "s#{{REPOSITORY}}#${{ github.repository }}#g" README.md
+          REPOSITORY="${{ github.repository }}"
 
-      - name: Testing Bootstrap Success
+          echo "Replacing placeholders in file contents..."
+
+          find . \
+            -type f \
+            -not -path "./.git/*" \
+            -exec grep -Iq . {} \; \
+            -exec sed -i \
+              -e "s#{{APP_NAME}}#${REPO_NAME}#g" \
+              -e "s#{{REPOSITORY}}#${REPOSITORY}#g" \
+              {} +
+
+          echo "Renaming files and directories..."
+
+          find . -depth \
+            \( -name '*{{APP_NAME}}*' -o -name '*{{REPOSITORY}}*' \) |
+          while read -r path; do
+            new_path="$path"
+
+            new_path="${new_path//'{{APP_NAME}}'/$REPO_NAME}"
+            new_path="${new_path//'{{REPOSITORY}}'/$REPOSITORY}"
+
+            if [ "$path" != "$new_path" ]; then
+              echo "Renaming: $path -> $new_path"
+              mv "$path" "$new_path"
+            fi
+          done
+
+      - name: Verify Bootstrap Success
+        shell: bash
         run: |
-          if grep "{{APP_NAME}}" README.md; then
-            echo "Faulty Bootstrap — stopping workflow. Please restart workflow."
+          if grep -R "{{APP_NAME}}" . \
+            --exclude-dir=.git \
+            --exclude-dir=.github; then
+            echo "Found unreplaced {{APP_NAME}} placeholders."
             exit 1
           fi
-          if grep "{{REPOSITORY}}" README.md; then
-            echo "Faulty Bootstrap — stopping workflow. Please restart workflow."
+
+          if grep -R "{{REPOSITORY}}" . \
+            --exclude-dir=.git \
+            --exclude-dir=.github; then
+            echo "Found unreplaced {{REPOSITORY}} placeholders."
             exit 1
           fi
 
-      - name: Remove bootstrap workflow
+      - name: Remove Bootstrap Workflow
+        run: rm -f .github/workflows/bootstrap.yaml
+
+      - name: Commit and Push Changes
+        shell: bash
         run: |
-          rm .github/workflows/bootstrap.yaml
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
 
-          git config user.name github-actions
-          git config user.email github-actions@github.com
+          git add -A
 
-          git add .github/workflows/bootstrap.yaml
-          git add README.md
-          git commit -m "Remove bootstrap workflow [skip ci]"
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "Bootstrap repository [skip ci]"
           git push
