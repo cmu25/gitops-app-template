@@ -17,8 +17,8 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@v1
         with:
-          app-id: ${{ secrets.BOT_APP_ID }}
-          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+          app-id: ${{ secrets.BOT_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
 
   build-and-push:
     needs: get-token
@@ -42,7 +42,7 @@ jobs:
         run: |
           mkdir -p /kaniko/.docker
           echo '{"auths":{"ghcr.io":{"auth":"'$(echo -n "${{ github.repository_owner }}:${{ needs.get-token.outputs.token }}" | base64)'"}}}' > /kaniko/.docker/config.json
-          
+
       - name: Trigger Config Repository
         run: |
           curl -X POST \
