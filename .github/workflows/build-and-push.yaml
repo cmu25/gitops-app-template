@@ -24,21 +24,25 @@ jobs:
     needs: get-token
     if: github.event.before != '0000000000000000000000000000000000000000'
     runs-on: ubuntu-latest
-    container:
-      image: gcr.io/kaniko-project/executor:v1.23.2-debug
     steps:
       - uses: actions/checkout@v4
 
       - name: Build and Push Image with Kaniko
-        run: |
-          /kaniko/executor \
-            --context ${{ github.workspace }} \
-            --dockerfile ${{ github.workspace }}/Dockerfile \
-            --destination ghcr.io/${{ github.repository }}:${{ github.sha }} \
-            --destination ghcr.io/${{ github.repository }}:latest \
-            --registry-username=${{ github.repository_owner }} \
-            --registry-password=${{ needs.get-token.outputs.token }}
+        uses: docker://gcr.io/kaniko-project/executor:v1.23.2-debug
+        with:
+          args: >-
+            --context=${{ github.workspace }}
+            --dockerfile=${{ github.workspace }}/Dockerfile
+            --destination=ghcr.io/${{ github.repository }}:${{ github.sha }}
+            --destination=ghcr.io/${{ github.repository }}:latest
+            --registry-username=${{ github.repository_owner }}
+            --registry-password="${{ needs.get-token.outputs.token }}"
 
+      - name: Configure Docker credentials
+        run: |
+          mkdir -p /kaniko/.docker
+          echo '{"auths":{"ghcr.io":{"auth":"'$(echo -n "${{ github.repository_owner }}:${{ needs.get-token.outputs.token }}" | base64)'"}}}' > /kaniko/.docker/config.json
+          
       - name: Trigger Config Repository
         run: |
           curl -X POST \
