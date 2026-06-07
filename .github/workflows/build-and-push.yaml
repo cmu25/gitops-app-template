@@ -20,14 +20,11 @@ jobs:
           app-id: ${{ secrets.BOT_ID }}
           private-key: ${{ secrets.BOT_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
-          repositories: |
-            ${{ github.event.repository.name }}
-            ${{ github.event.repository.name }}-config
 
       - name: Configure Docker credentials
         run: |
           mkdir -p /home/runner/work/_temp/_github_home/.docker
-          echo '{"auths":{"ghcr.io":{"auth":"'$(echo -n "${{ github.repository_owner }}:${{ steps.app-token.outputs.token }}" | base64)'"}}}' > /home/runner/work/_temp/_github_home/.docker/config.json
+          echo '{"auths":{"ghcr.io":{"auth":"'$(echo -n "${{ github.repository_owner }}:${{ secrets.GITHUB_TOKEN }}" | base64 -w 0)'"}}}' > /home/runner/work/_temp/_github_home/.docker/config.json
 
       - name: Build and Push Image with Kaniko
         uses: docker://gcr.io/kaniko-project/executor:v1.23.2-debug
